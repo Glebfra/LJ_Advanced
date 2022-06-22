@@ -5,7 +5,8 @@ class Vector(object):
     def __init__(self, vector: dict):
         self.basis = list(vector.keys())
         self.vector = vector
-        self.length = len(self.vector[self.basis[0]])
+        temp = self.vector[self.basis[0]]
+        self.length = len(temp) if type(temp) == np.ndarray else 1
 
     def __add__(self, other):
         temp = {}
@@ -71,6 +72,22 @@ class Vector(object):
                 continue
         return Vector(temp)
 
+    def __floordiv__(self, other):
+        temp = {}
+        if type(other) == dict:
+            for axis in self.basis:
+                temp[axis] = self.vector[axis] // other[axis]
+                continue
+        elif type(other) == Vector:
+            for axis in self.basis:
+                temp[axis] = self.vector[axis] // other.vector[axis]
+                continue
+        elif type(other) == int or float:
+            for axis in self.basis:
+                temp[axis] = self.vector[axis] // other
+                continue
+        return Vector(temp)
+
     def __pow__(self, power, modulo=None):
         temp = {}
         for axis in self.basis:
@@ -105,3 +122,9 @@ class Vector(object):
 
     def to_dict(self):
         return self.vector
+
+
+if __name__ == '__main__':
+    a = Vector({'x': 10, 'y': 0, 'z': 0})
+    b = 4
+    print((a//b).to_dict())

@@ -1,17 +1,14 @@
 import numpy as np
 import numba
-from Vector import Vector
+from classes.Vector import Vector
 
 
 class Base(object):
-    """
-    This superclass consists the radiuses, velocities
-    and methods to work with them
-     """
+    """This superclass consists the radiuses, velocities and methods to work with them"""
 
     def __init__(self, radiuses: Vector, velocities: Vector) -> None:
-        self.radiuses = radiuses.to_dict()
-        self.velocities = velocities.to_dict()
+        self.radiuses = radiuses
+        self.velocities = velocities
         self.number_of_particles = len(radiuses)
         self.basis = radiuses.get_keys()
 
@@ -24,8 +21,9 @@ class Base(object):
 
         differences = {}
         ones_matrix = np.ones((1, self.number_of_particles))
+        radiuses = self.radiuses.to_dict()
         for axis in self.basis:
-            differences[axis] = radius_differences(self.radiuses[axis], ones_matrix)
+            differences[axis] = radius_differences(radiuses[axis], ones_matrix)
         return differences
 
 

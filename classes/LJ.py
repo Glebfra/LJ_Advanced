@@ -1,5 +1,5 @@
-from Base import Base
-from Vector import Vector
+from classes.Base import Base
+from classes.Vector import Vector
 
 
 class LJ(Base):
@@ -27,7 +27,7 @@ class LJ(Base):
         """
         This method realise the calculation of force
 
-        :return: Dictionary with forces (dict)
+        :return: Vector with forces (Vector)
         """
 
         differences = Vector(self.radius_differences())
