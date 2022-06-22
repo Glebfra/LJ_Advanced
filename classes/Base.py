@@ -1,5 +1,6 @@
 import numpy as np
 import numba
+from Vector import Vector
 
 
 class Base(object):
@@ -8,10 +9,11 @@ class Base(object):
     and methods to work with them
      """
 
-    def __init__(self, radiuses: dict, velocities: dict) -> None:
-        self.radiuses = radiuses
-        self.velocities = velocities
-        self.number_of_particles = len(self.radiuses['x'])
+    def __init__(self, radiuses: Vector, velocities: Vector) -> None:
+        self.radiuses = radiuses.to_dict()
+        self.velocities = velocities.to_dict()
+        self.number_of_particles = len(radiuses)
+        self.basis = radiuses.get_keys()
 
     def radius_differences(self) -> dict:
         """
@@ -22,7 +24,7 @@ class Base(object):
 
         differences = {}
         ones_matrix = np.ones((1, self.number_of_particles))
-        for axis in self.radiuses:
+        for axis in self.basis:
             differences[axis] = radius_differences(self.radiuses[axis], ones_matrix)
         return differences
 
@@ -30,3 +32,7 @@ class Base(object):
 @numba.njit(fastmath=True)
 def radius_differences(radiuses: np.ndarray, ones_matrix: np.ndarray) -> np.ndarray:
     return radiuses @ ones_matrix - ones_matrix.T @ radiuses.T
+
+
+if __name__ == '__main__':
+    pass
