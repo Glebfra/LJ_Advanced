@@ -8,12 +8,13 @@ class System(LJ):
 
     def __init__(self, radiuses: Vector, velocities: Vector, sigma: float, eps: float,
                  temperature: float, mass: float, cube_length) -> None:
-        super().__init__(radiuses, velocities, sigma, eps)
+        super().__init__(radiuses, velocities, sigma, eps, mass)
 
         self.temperature = temperature
-        self.mass = mass
-        self.momentum_temperature = 0
+        self.momentum_temperature = temperature
         self.cube_length = cube_length
+        self.boltsman = 1.38e-23
+        self.acceleration = self.force() / self.mass
 
     @classmethod
     def create_default_2D_system(cls, number_of_particles: int, cube_length: float, temperature: float):
@@ -39,7 +40,7 @@ class System(LJ):
             'radiuses': Vector({axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
             'velocities': Vector(
                 {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in 'xyz'}),
-            'sigma': 1e-10,
+            'sigma': 51e-12,
             'eps': 120 * boltsman,
             'temperature': temperature,
             'mass': mass,
@@ -48,19 +49,22 @@ class System(LJ):
         return cls(**properties)
 
     def next_time_turn(self, delta_time: float) -> None:
-        force = self.force()
-        self.radiuses += self.velocities * delta_time + (force / self.mass * delta_time ** 2) / 2
-        self.velocities = (self.velocities * self.get_velocity_coef()) + force / self.mass * delta_time
+        self.radiuses = self.radiuses + self.velocities * delta_time + 0.5 * self.acceleration * delta_time ** 2
+        self.velocities = self.velocities + self.acceleration * delta_time / 2
+
+        self.acceleration = self.force() / self.mass
+        self.velocities = self.velocities + self.acceleration * delta_time / 2
+
         self.periodic_boundary_conditions()
 
-    def get_velocity_coef(self) -> float:
-        self.momentum_temperature = 0
-        return 1
+    def get_velocity_coef(self) -> Vector:
+        self.momentum_temperature = (self.velocities ** 2) * self.mass / (
+                3 * self.boltsman * self.number_of_particles)
+        return (self.temperature / self.momentum_temperature) ** (1 / 2)
 
     def periodic_boundary_conditions(self):
-        self.radiuses -= (self.radiuses // self.cube_length) * self.cube_length
+        self.radiuses = self.radiuses - (self.radiuses // self.cube_length) * self.cube_length
 
 
 if __name__ == '__main__':
-    system = System.create_default_2D_system(number_of_particles=5, cube_length=1e-8, temperature=300)
-    print(system.radiuses)
+    pass
