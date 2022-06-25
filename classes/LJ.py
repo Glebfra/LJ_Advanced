@@ -19,7 +19,7 @@ class LJ(Base):
         :return: Potential energy (float)
         """
 
-        differences = Vector(self.radius_differences())
+        differences = Vector(self.radius_differences)
         r = abs(differences)
         temp = self.sigma / r
         return 4 * self.eps * (temp ** 12 - temp ** 6).sum()
@@ -32,7 +32,7 @@ class LJ(Base):
         :return: Vector with forces (Vector)
         """
 
-        differences = Vector(self.radius_differences())
+        differences = Vector(self.radius_differences)
         r = abs(differences)
         temp = self.sigma / r
         forces = differences * (8 * self.eps * (12 * temp ** 14 / self.sigma ** 2 - 6 * temp ** 8 / self.sigma ** 2))

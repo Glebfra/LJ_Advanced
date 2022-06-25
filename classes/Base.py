@@ -13,6 +13,7 @@ class Base(object):
         self.number_of_particles = len(radiuses)
         self.basis = radiuses.get_keys()
 
+    @property
     def radius_differences(self) -> dict:
         """
         This method realise the calculation of radius differences
