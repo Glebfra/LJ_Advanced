@@ -216,6 +216,4 @@ class Vector(object):
 
 
 if __name__ == '__main__':
-    a = Vector({'x': 10, 'y': 0, 'z': 0})
-    b = 3
-    print((b * a).to_dict())
+    pass

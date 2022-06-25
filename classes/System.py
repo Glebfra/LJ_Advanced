@@ -14,7 +14,6 @@ class System(LJ):
         self.momentum_temperature = temperature
         self.cube_length = cube_length
         self.boltsman = 1.38e-23
-        self.acceleration = self.force() / self.mass
 
     @classmethod
     def create_default_2D_system(cls, number_of_particles: int, cube_length: float, temperature: float):
@@ -49,18 +48,21 @@ class System(LJ):
         return cls(**properties)
 
     def next_time_turn(self, delta_time: float) -> None:
-        self.radiuses = self.radiuses + self.velocities * delta_time + 0.5 * self.acceleration * delta_time ** 2
-        self.velocities = self.velocities + self.acceleration * delta_time / 2
+        acceleration_old = self.acceleration
 
-        self.acceleration = self.force() / self.mass
-        self.velocities = self.velocities + self.acceleration * delta_time / 2
+        self.radiuses += self.velocities * delta_time + 0.5 * acceleration_old * delta_time ** 2
+        acceleration_new = self.acceleration
+
+        self.velocities *= self.velocity_coef
+        self.velocities += 0.5 * (acceleration_old + acceleration_new) * delta_time
 
         self.periodic_boundary_conditions()
 
-    def get_velocity_coef(self) -> Vector:
+    @property
+    def velocity_coef(self) -> Vector:
         self.momentum_temperature = (self.velocities ** 2) * self.mass / (
                 3 * self.boltsman * self.number_of_particles)
-        return (self.temperature / self.momentum_temperature) ** (1 / 2)
+        return (self.temperature / self.momentum_temperature).sum() ** (1 / 2)
 
     def periodic_boundary_conditions(self):
         self.radiuses = self.radiuses - (self.radiuses // self.cube_length) * self.cube_length

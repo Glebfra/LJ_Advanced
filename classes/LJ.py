@@ -11,6 +11,7 @@ class LJ(Base):
         self.sigma = sigma
         self.eps = eps
 
+    @property
     def potential(self) -> float:
         """
         This method realise the calculation of potential energy
@@ -23,6 +24,7 @@ class LJ(Base):
         temp = self.sigma / r
         return 4 * self.eps * (temp ** 12 - temp ** 6).sum()
 
+    @property
     def force(self) -> Vector:
         """
         This method realise the calculation of force
@@ -36,8 +38,14 @@ class LJ(Base):
         forces = differences * (8 * self.eps * (12 * temp ** 14 / self.sigma ** 2 - 6 * temp ** 8 / self.sigma ** 2))
         return forces.sum_columns()
 
+    @property
+    def acceleration(self) -> Vector:
+        return self.force / self.mass
+
+    @property
     def kinetic(self) -> float:
         return self.mass * (self.velocities ** 2).sum() / 2
 
+    @property
     def hamilton(self) -> float:
-        return self.potential() + self.kinetic()
+        return self.potential + self.kinetic
