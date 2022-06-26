@@ -1,4 +1,7 @@
 import numpy as np
+import pycuda.gpuarray as gpuarray
+import pycuda.cumath as cumath
+import pycuda.autoinit
 
 
 class Vector(object):
@@ -10,10 +13,7 @@ class Vector(object):
 
     def __add__(self, other):
         temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other[axis]
-        elif type(other) == Vector:
+        if type(other) == Vector:
             for axis in self.basis:
                 temp[axis] = self.vector[axis] + other.vector[axis]
         elif type(other) == np.ndarray:
@@ -24,21 +24,7 @@ class Vector(object):
                 temp[axis] = self.vector[axis] + other
         return Vector(temp)
 
-    def __radd__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other
-        return Vector(temp)
+    __radd__ = __add__
 
     def __sub__(self, other):
         temp = {}
@@ -88,21 +74,7 @@ class Vector(object):
                 temp[axis] = self.vector[axis] * other
         return Vector(temp)
 
-    def __rmul__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other
-        return Vector(temp)
+    __rmul__ = __mul__
 
     def __truediv__(self, other):
         temp = {}
@@ -215,5 +187,20 @@ class Vector(object):
         return Vector(self.vector).sum() / (self.length * 3)
 
 
+def _other_to_gpuarray(other: Vector):
+    temp = {}
+    if type(other) == Vector:
+        for axis in other.get_keys():
+            temp[axis] = gpuarray.to_gpu(other.vector[axis])
+    elif type(other) == int or float:
+        temp = gpuarray.to_gpu(other)
+    return temp
+
+
 if __name__ == '__main__':
-    pass
+    size = 1e7
+    a = np.linspace (1, size) . astype (np.float32 )
+    X_GPU = gpuarray.to_gpu(a)
+    Y_GPU = cumath.sin(X_GPU)
+    Y = Y_GPU.get()
+    print(Y)

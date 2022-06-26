@@ -4,7 +4,7 @@ from classes.Vector import Vector
 
 
 class System(LJ):
-    """This class describes the system"""
+    """This class describes the system founded on Lenard Jones particular interactions"""
 
     def __init__(self, radiuses: Vector, velocities: Vector, sigma: float, eps: float,
                  temperature: float, mass: float, cube_length) -> None:
@@ -48,13 +48,9 @@ class System(LJ):
         return cls(**properties)
 
     def next_time_turn(self, delta_time: float) -> None:
-        acceleration_old = self.acceleration
-
-        self.radiuses += self.velocities * delta_time + 0.5 * acceleration_old * delta_time ** 2
-        acceleration_new = self.acceleration
-
         self.velocities *= self.velocity_coef
-        self.velocities += 0.5 * (acceleration_old + acceleration_new) * delta_time
+        self.velocities += self.force / self.mass * delta_time
+        self.radiuses += self.velocities * delta_time
 
         self.periodic_boundary_conditions()
 
@@ -64,8 +60,11 @@ class System(LJ):
                 3 * self.boltsman * self.number_of_particles)
         return (self.temperature / self.momentum_temperature).sum() ** (1 / 2)
 
-    def periodic_boundary_conditions(self):
-        self.radiuses = self.radiuses - (self.radiuses // self.cube_length) * self.cube_length
+    def periodic_boundary_conditions(self) -> None:
+        self.radiuses -= (self.radiuses // self.cube_length) * self.cube_length
+
+    def boundary_conditions(self) -> None:
+        pass
 
 
 if __name__ == '__main__':

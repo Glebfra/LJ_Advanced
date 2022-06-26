@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 
 def main():
     # Creating the system
-    system = System.create_default_3D_system(number_of_particles=100, cube_length=1e-8, temperature=300)
+    np.random.seed(1)
+    system = System.create_default_3D_system(number_of_particles=200, cube_length=1e-8, temperature=300)
 
     evolution_time = 1e-10
     number_of_iterations = 1000
