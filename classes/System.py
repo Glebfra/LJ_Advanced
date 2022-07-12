@@ -1,10 +1,11 @@
 import numpy as np
+
 from classes.LJ import LJ
 from classes.Vector import Vector
 
 
 class System(LJ):
-    """This class describes the system"""
+    """This class describes the system founded on Lenard Jones particular interactions"""
 
     def __init__(self, radiuses: Vector, velocities: Vector, sigma: float, eps: float,
                  temperature: float, mass: float, cube_length) -> None:
@@ -17,55 +18,79 @@ class System(LJ):
 
     @classmethod
     def create_default_2D_system(cls, number_of_particles: int, cube_length: float, temperature: float):
-        boltsman, mass = 1.38e-23, 1.6e-27
+        def _particles_overlap(radiuses: Vector, sigma: float) -> Vector:
+            differences = radiuses.differences()
+            r = abs(differences)
+            if r.min() < sigma * 1.1:
+                print(f'Now the coordinates are configuring')
+                new_radiuses = Vector(
+                    {axis: np.random.sample((number_of_particles, 1), dtype=np.float32) * cube_length for axis in 'xy'})
+                _particles_overlap(new_radiuses, sigma)
+            else:
+                return radiuses
+
+        boltsman, mass = 1.38e-23, 6.69e-26
         start_velocity = np.sqrt(boltsman * temperature / mass)
         properties = {
             'radiuses': Vector({axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xy'}),
             'velocities': Vector(
                 {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in 'xy'}),
-            'sigma': 51e-12,
-            'eps': 120 * boltsman,
+            'sigma': 3.4e-10,
+            'eps': 119.8 * boltsman,
             'temperature': temperature,
             'mass': mass,
             'cube_length': cube_length
         }
+        properties['radiuses'] = _particles_overlap(properties['radiuses'], properties['sigma'])
         return cls(**properties)
 
     @classmethod
     def create_default_3D_system(cls, number_of_particles: int, cube_length: float, temperature: float):
-        boltsman, mass = 1.38e-23, 1.6e-27
+        def _particles_overlap(radiuses: Vector, sigma: float) -> Vector:
+            differences = radiuses.differences()
+            r = abs(differences)
+            if r.min() < sigma * 1.1:
+                new_radiuses = Vector(
+                    {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'})
+                _particles_overlap(new_radiuses, sigma)
+                print(f'Now the coordinates are configuring')
+            else:
+                return radiuses
+
+        boltsman, mass = 1.38e-23, 6.69e-26
         start_velocity = np.sqrt(boltsman * temperature / mass)
         properties = {
             'radiuses': Vector({axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
             'velocities': Vector(
                 {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in 'xyz'}),
-            'sigma': 51e-12,
-            'eps': 120 * boltsman,
+            'sigma': 3.4e-10,
+            'eps': 119.8 * boltsman,
             'temperature': temperature,
             'mass': mass,
             'cube_length': cube_length
         }
+        properties['radiuses'] = _particles_overlap(properties['radiuses'], properties['sigma'])
+
         return cls(**properties)
 
     def next_time_turn(self, delta_time: float) -> None:
-        acceleration_old = self.acceleration
-
-        self.radiuses += self.velocities * delta_time + 0.5 * acceleration_old * delta_time ** 2
-        acceleration_new = self.acceleration
-
-        self.velocities *= self.velocity_coef
-        self.velocities += 0.5 * (acceleration_old + acceleration_new) * delta_time
+        self.velocities = self.velocities * self.velocity_coef
+        self.velocities = self.velocities + self.acceleration * delta_time
+        self.radiuses = self.radiuses + self.velocities * delta_time
 
         self.periodic_boundary_conditions()
 
     @property
-    def velocity_coef(self) -> Vector:
-        self.momentum_temperature = (self.velocities ** 2) * self.mass / (
+    def velocity_coef(self) -> float:
+        self.momentum_temperature = (self.velocities ** 2).sum() * self.mass / (
                 3 * self.boltsman * self.number_of_particles)
-        return (self.temperature / self.momentum_temperature).sum() ** (1 / 2)
+        return (self.temperature / self.momentum_temperature) ** (1 / 2)
 
-    def periodic_boundary_conditions(self):
-        self.radiuses = self.radiuses - (self.radiuses // self.cube_length) * self.cube_length
+    def periodic_boundary_conditions(self) -> None:
+        self.radiuses -= (self.radiuses // self.cube_length) * self.cube_length
+
+    def boundary_conditions(self) -> None:
+        pass
 
 
 if __name__ == '__main__':
