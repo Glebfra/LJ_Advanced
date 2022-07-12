@@ -1,7 +1,4 @@
 import numpy as np
-import pycuda.gpuarray as gpuarray
-import pycuda.cumath as cumath
-import pycuda.autoinit
 
 
 class Vector(object):
@@ -12,133 +9,32 @@ class Vector(object):
         self.length = len(temp) if type(temp) == np.ndarray else 1
 
     def __add__(self, other):
-        temp = {}
-        if type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] + other
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='+')
 
     __radd__ = __add__
 
     def __sub__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] - other[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] - other.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] - other
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] - other
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='-')
 
     def __rsub__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = other[axis] - self.vector[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = other[axis] - self.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = other - self.vector[axis]
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = other - self.vector[axis]
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='-', inverse=True)
 
     def __mul__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] * other
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='*')
 
     __rmul__ = __mul__
 
     def __truediv__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] / other[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] / other.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] / other
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] / other
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='/')
 
     def __rtruediv__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = other[axis] / self.vector[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = other[axis] / self.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = other / self.vector[axis]
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = other / self.vector[axis]
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='/', inverse=True)
 
     def __floordiv__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] // other[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] // other.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] // other
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = self.vector[axis] // other
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='//')
 
     def __rfloordiv__(self, other):
-        temp = {}
-        if type(other) == dict:
-            for axis in self.basis:
-                temp[axis] = other[axis] // self.vector[axis]
-        elif type(other) == Vector:
-            for axis in self.basis:
-                temp[axis] = other[axis] // self.vector[axis]
-        elif type(other) == np.ndarray:
-            for axis in self.basis:
-                temp[axis] = other // self.vector[axis]
-        elif type(other) == int or float:
-            for axis in self.basis:
-                temp[axis] = other // self.vector[axis]
-        return Vector(temp)
+        return self._arithmetic_operation(other, operation='//', inverse=True)
 
     def __pow__(self, power, modulo=None):
         temp = {}
@@ -186,21 +82,37 @@ class Vector(object):
     def get_average(self) -> float:
         return Vector(self.vector).sum() / (self.length * 3)
 
+    def differences(self):
+        differences = {}
+        ones_matrix = np.ones((1, self.length))
+        e = np.eye(self.length)
+        for axis in self.basis:
+            differences[axis] = self.vector[axis] @ ones_matrix - ones_matrix.T @ self.vector[axis].T
+            differences[axis] += e
+        return Vector(differences)
 
-def _other_to_gpuarray(other: Vector):
-    temp = {}
-    if type(other) == Vector:
-        for axis in other.get_keys():
-            temp[axis] = gpuarray.to_gpu(other.vector[axis])
-    elif type(other) == int or float:
-        temp = gpuarray.to_gpu(other)
-    return temp
+    def _arithmetic_operation(self, other, operation, inverse=False):
+        temp = {}
+        if type(other) == Vector:
+            if not inverse:
+                for axis in self.basis:
+                    temp[axis] = eval(f'self.vector[axis] {operation} other.vector[axis]')
+            else:
+                for axis in self.basis:
+                    temp[axis] = eval(f'other.vector[axis] {operation} self.vector[axis]')
+        elif type(other) == np.ndarray or int or float:
+            if not inverse:
+                for axis in self.basis:
+                    temp[axis] = eval(f'self.vector[axis] {operation} other')
+            else:
+                for axis in self.basis:
+                    temp[axis] = eval(f'other {operation} self.vector[axis]')
+        else:
+            raise TypeError('Incompatible type use Vector, ndarray, int, float')
+        return Vector(temp)
 
 
 if __name__ == '__main__':
-    size = 1e7
-    a = np.linspace (1, size) . astype (np.float32 )
-    X_GPU = gpuarray.to_gpu(a)
-    Y_GPU = cumath.sin(X_GPU)
-    Y = Y_GPU.get()
-    print(Y)
+    a = Vector({axis: np.random.sample((10, 10)) for axis in 'xyz'})
+    b = 0
+    print((a+b).to_dict())
