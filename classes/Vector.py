@@ -1,11 +1,13 @@
 import numpy as np
 
+from classes.Gpu import GpuOperations
 
-class Vector(object):
+
+class Vector(GpuOperations):
     def __init__(self, vector: dict) -> None:
         self.basis = list(vector.keys())
         self.vector = vector
-        temp = self.vector[self.basis[0]]
+        temp = vector[self.basis[0]]
         self.length = len(temp) if type(temp) == np.ndarray else 1
 
     def __add__(self, other):
@@ -108,11 +110,11 @@ class Vector(object):
                 for axis in self.basis:
                     temp[axis] = eval(f'other {operation} self.vector[axis]')
         else:
-            raise TypeError('Incompatible type use Vector, ndarray, int, float')
+            raise TypeError('Incompatible type use Vector, ndarray, int or float')
         return Vector(temp)
 
 
 if __name__ == '__main__':
-    a = Vector({axis: np.random.sample((10, 10)) for axis in 'xyz'})
-    b = 0
-    print((a+b).to_dict())
+    a = Vector({axis: np.random.sample((1000, 1)) for axis in 'xyz'})
+    b = Vector({axis: np.random.sample((1000, 1)) for axis in 'xyz'})
+    print((a + b).to_dict())

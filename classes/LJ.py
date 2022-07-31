@@ -12,24 +12,20 @@ class LJ(Base):
         self.eps = eps
 
     @property
-    def potential(self) -> Vector:
+    def potential(self) -> float:
         """
-        This method realise the calculation of potential energy
-
-        :return: Potential energy (float)
+        Potential energy of LJ system
         """
 
         differences = self.radius_differences
         r = abs(differences)
         temp = self.sigma / r
-        return 4 * self.eps * (temp ** 12 - temp ** 6)
+        return 4 * self.eps * (temp ** 12 - temp ** 6).sum()
 
     @property
     def force(self) -> Vector:
         """
-        This method realise the calculation of force
-
-        :return: Vector with forces (Vector)
+        Forces of LJ system
         """
 
         differences = self.radius_differences
@@ -44,11 +40,11 @@ class LJ(Base):
         return self.force / self.mass
 
     @property
-    def kinetic(self) -> Vector:
+    def kinetic(self) -> float:
         """Kinetic energy of LJ System"""
-        return self.mass * (self.velocities ** 2).sum_columns() / 2
+        return 0.5 * self.mass * (self.velocities ** 2).sum()
 
     @property
-    def hamilton(self) -> Vector:
+    def hamilton(self) -> float:
         """Hamiltonian of LJ System"""
         return self.potential + self.kinetic
