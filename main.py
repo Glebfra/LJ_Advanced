@@ -1,12 +1,17 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from classes.System import System
 
 
 def main():
     # Creating the system
-    system = System.create_default_3D_system(number_of_particles=300, cube_length=1e-7, temperature=300)
+    properties = {
+        'number_of_particles': 50,
+        'cube_length': 1e-7,
+        'temperature': 300,
+    }
+    system = System.create_default_3D_system(**properties)
 
     evolution_time = 1e-10
     number_of_iterations = 1000
