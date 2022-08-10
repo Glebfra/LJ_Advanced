@@ -1,5 +1,6 @@
 import numpy as np
 
+from classes.GpuVector import GpuVector
 from classes.LJ import LJ
 from classes.Vector import Vector
 
@@ -50,7 +51,7 @@ class System(LJ):
             differences = radiuses.differences()
             r = abs(differences)
             if r.min() < sigma * 1.1:
-                new_radiuses = Vector(
+                new_radiuses = GpuVector.create_vector_from_dict(
                     {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'})
                 _particles_overlap(new_radiuses, sigma)
                 print(f'Now the coordinates are configuring')
@@ -60,8 +61,9 @@ class System(LJ):
         boltsman, mass = 1.38e-23, 6.69e-26
         start_velocity = np.sqrt(boltsman * temperature / mass)
         properties = {
-            'radiuses': Vector({axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
-            'velocities': Vector(
+            'radiuses': GpuVector.create_vector_from_dict(
+                {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
+            'velocities': GpuVector.create_vector_from_dict(
                 {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in 'xyz'}),
             'sigma': 3.4e-10,
             'eps': 119.8 * boltsman,
