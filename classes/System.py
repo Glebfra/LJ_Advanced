@@ -48,23 +48,24 @@ class System(LJ):
     @classmethod
     def create_default_3D_system(cls, number_of_particles: int, cube_length: float, temperature: float):
         def _particles_overlap(radiuses: Vector, sigma: float) -> Vector:
+            print(f'Now the coordinates are configuring')
             differences = radiuses.differences()
             r = abs(differences)
             if r.min() < sigma * 1.1:
-                new_radiuses = GpuVector.create_vector_from_dict(
+                new_radiuses = Vector(
                     {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'})
                 _particles_overlap(new_radiuses, sigma)
-                print(f'Now the coordinates are configuring')
             else:
                 return radiuses
 
         boltsman, mass = 1.38e-23, 6.69e-26
         start_velocity = np.sqrt(boltsman * temperature / mass)
         properties = {
-            'radiuses': GpuVector.create_vector_from_dict(
-                {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
+            'radiuses': Vector(
+                {axis: np.float32(np.random.sample((number_of_particles, 1))) * cube_length for axis in 'xyz'}),
             'velocities': GpuVector.create_vector_from_dict(
-                {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in 'xyz'}),
+                {axis: np.float32((2 * np.random.sample((number_of_particles, 1)) - 1)) * start_velocity for axis in
+                 'xyz'}),
             'sigma': 3.4e-10,
             'eps': 119.8 * boltsman,
             'temperature': temperature,
@@ -72,6 +73,7 @@ class System(LJ):
             'cube_length': cube_length
         }
         properties['radiuses'] = _particles_overlap(properties['radiuses'], properties['sigma'])
+        properties['radiuses'] = GpuVector.create_vector_from_dict(properties['radiuses'].vector)
 
         return cls(**properties)
 

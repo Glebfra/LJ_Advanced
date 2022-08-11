@@ -7,14 +7,14 @@ from classes.System import System
 def main():
     # Creating the system
     properties = {
-        'number_of_particles': 50,
-        'cube_length': 1e-7,
+        'number_of_particles': int(2**10),
+        'cube_length': 1e-6,
         'temperature': 300,
     }
     system = System.create_default_3D_system(**properties)
 
-    evolution_time = 1e-10
-    number_of_iterations = 1000
+    evolution_time = 1e-11
+    number_of_iterations = 100
     delta_time = evolution_time / number_of_iterations
     H = []
 

@@ -2,16 +2,29 @@ import numpy as np
 from numba import cuda
 
 
+def types(func):
+    def inner(*args, **kwargs):
+        if type(args[1]) != GpuVector:
+            rows = args[0].vector[args[0].basis[0]].shape[0]
+            columns = args[0].vector[args[0].basis[0]].shape[1]
+            other = GpuVector.create_vector_from_dict(
+                {axis: np.ones((rows, columns)) * args[1] for axis in 'xyz'})
+            return func(args[0], other, **kwargs)
+        return func(*args, **kwargs)
+
+    return inner
+
+
 class GpuOperations(object):
     @staticmethod
-    @cuda.jit
+    @cuda.jit(fastmath=True)
     def cuda_addition(A, B, C):
         row, column = cuda.grid(2)
         if row < C.shape[0] and column < C.shape[1]:
             C[row, column] = A[row, column] + B[row, column]
 
     @staticmethod
-    @cuda.jit
+    @cuda.jit(fastmath=True)
     def cuda_substraction(A, B, C):
         row, column = cuda.grid(2)
         if row < C.shape[0] and column < C.shape[1]:
@@ -25,7 +38,7 @@ class GpuOperations(object):
             C[row, column] = A[row, column] * B[row, column]
 
     @staticmethod
-    @cuda.jit
+    @cuda.jit(fastmath=True)
     def cuda_divide(A, B, C):
         row, column = cuda.grid(2)
         if row < C.shape[0] and column < C.shape[1]:
@@ -33,13 +46,20 @@ class GpuOperations(object):
 
     @staticmethod
     @cuda.jit
+    def cuda_floor_divide(A, B, C):
+        row, column = cuda.grid(2)
+        if row < C.shape[0] and column < C.shape[1]:
+            C[row, column] = A[row, column] // B[row, column]
+
+    @staticmethod
+    @cuda.jit(fastmath=True)
     def cuda_power(A, B, C):
         row, column = cuda.grid(2)
         if row < C.shape[0] and column < C.shape[1]:
             C[row, column] = A[row, column] ** B
 
     @staticmethod
-    @cuda.jit
+    @cuda.jit(fastmath=True)
     def cuda_matrix_mul(A, B, C):
         row, column = cuda.grid(2)
         if row < A.shape[0] and column < B.shape[1]:
@@ -47,6 +67,25 @@ class GpuOperations(object):
             for k in range(A.shape[1]):
                 temp += A[row, k] * B[k, column]
             C[row, column] = temp
+
+    @staticmethod
+    @cuda.jit(fastmath=True)
+    def cuda_sum(A, B):
+        row, column = cuda.grid(2)
+        temp = 0
+        if row < A.shape[0] and column < A.shape[1]:
+            temp += A[row, column]
+        B = temp
+
+    @staticmethod
+    @cuda.jit(fastmath=True)
+    def cuda_sum_columns(A, B):
+        row, column = cuda.grid(2)
+        temp = 0
+        if row < A.shape[0]:
+            for j in range(A.shape[1]):
+                temp += A[row, j]
+            B[row, 0] = temp
 
 
 class GpuVector(GpuOperations):
@@ -78,6 +117,7 @@ class GpuVector(GpuOperations):
             vector[axis] = cuda.to_device(vector[axis])
         return cls(vector)
 
+    @types
     def __add__(self, other):
         for axis in self.basis:
             self.cuda_addition[self.bpg, self.tpb](self.vector[axis], other.vector[axis], self.answer[axis])
@@ -85,16 +125,19 @@ class GpuVector(GpuOperations):
 
     __radd__ = __add__
 
+    @types
     def __sub__(self, other):
         for axis in self.basis:
             self.cuda_substraction[self.bpg, self.tpb](self.vector[axis], other.vector[axis], self.answer[axis])
         return GpuVector(self.answer)
 
+    @types
     def __rsub__(self, other):
         for axis in self.basis:
             self.cuda_substraction[self.bpg, self.tpb](other.vector[axis], self.vector[axis], self.answer[axis])
         return GpuVector(self.answer)
 
+    @types
     def __mul__(self, other):
         for axis in self.basis:
             self.cuda_multiplication[self.bpg, self.tpb](self.vector[axis], other.vector[axis], self.answer[axis])
@@ -102,6 +145,7 @@ class GpuVector(GpuOperations):
 
     __rmul__ = __mul__
 
+    @types
     def __matmul__(self, other):
         answer = {axis: cuda.to_device(np.zeros((self.vector[axis].shape[0], other.vector[axis].shape[1]))) for axis in
                   self.basis}
@@ -109,23 +153,38 @@ class GpuVector(GpuOperations):
             self.cuda_matrix_mul[self.bpg, self.tpb](self.vector[axis], other.vector[axis], answer[axis])
         return GpuVector(answer)
 
+    @types
     def __rmatmul__(self, other):
         answer = {axis: cuda.to_device(np.zeros((self.size, self.size))) for axis in self.basis}
         for axis in self.basis:
             self.cuda_matrix_mul[self.bpg, self.tpb](other.vector[axis], self.vector[axis], answer[axis])
         return GpuVector(answer)
 
+    @types
     def __truediv__(self, other):
         for axis in self.basis:
             self.cuda_divide[self.bpg, self.tpb](self.vector[axis], other.vector[axis], self.answer[axis])
         return GpuVector(self.answer)
 
+    @types
     def __rtruediv__(self, other):
         for axis in self.basis:
             self.cuda_divide[self.bpg, self.tpb](other.vector[axis], self.vector[axis], self.answer[axis])
         return GpuVector(self.answer)
 
-    def __pow__(self, power, modulo=None):
+    @types
+    def __floordiv__(self, other):
+        for axis in self.basis:
+            self.cuda_floor_divide[self.bpg, self.tpb](self.vector[axis], other.vector[axis], self.answer[axis])
+        return GpuVector(self.answer)
+
+    @types
+    def __rfloordiv__(self, other):
+        for axis in self.basis:
+            self.cuda_floor_divide[self.bpg, self.tpb](other.vector[axis], self.vector[axis], self.answer[axis])
+        return GpuVector(self.answer)
+
+    def __pow__(self, power):
         for axis in self.basis:
             self.cuda_power[self.bpg, self.tpb](self.vector[axis], power, self.answer[axis])
         return GpuVector(self.answer)
@@ -155,16 +214,37 @@ class GpuVector(GpuOperations):
         return GpuVector(self.vector)
 
     def differences(self):
-        ones_matrix = GpuVector.create_vector_from_dict({axis: np.ones((1, self.size)) for axis in self.basis})
-        vector = GpuVector(self.vector)
-        e = GpuVector.create_vector_from_dict({axis: np.eye(self.size) for axis in self.basis})
+        ones_matrix = cuda.to_device(np.ones((1, self.size)))
+        e = cuda.to_device(np.eye(self.size))
+        mat_mul_1, mat_mul_2 = cuda.device_array_like(e), cuda.device_array_like(e)
+        differences = {axis: cuda.device_array_like(e) for axis in self.basis}
 
-        differences = vector @ ones_matrix - ones_matrix.T @ vector.T
-        differences = differences + e
-        return differences
+        differences = self.__matmul__(ones_matrix) - self.__rmatmul__(ones_matrix.T)
+
+        for axis in self.basis:
+            self.cuda_matrix_mul[self.bpg, self.tpb](self.vector[axis], ones_matrix, mat_mul_1)
+            self.cuda_matrix_mul[self.bpg, self.tpb](ones_matrix.T, self.vector[axis].T, mat_mul_2)
+            self.cuda_substraction[self.bpg, self.tpb](mat_mul_1, mat_mul_2, differences[axis])
+            self.cuda_addition[self.bpg, self.tpb](differences[axis], e, differences[axis])
+        return GpuVector(differences)
+
+    def get_keys(self):
+        return self.basis
+
+    def sum(self) -> float:
+        temp = 0
+        for axis in self.basis:
+            temp += self.vector[axis].copy_to_host().sum()
+        return temp
+
+    def sum_columns(self):
+        answer = {axis: cuda.to_device(np.zeros((self.vector[self.basis[0]].shape[0], 1))) for axis in self.basis}
+        for axis in self.basis:
+            self.cuda_sum_columns[self.bpg, self.tpb](self.vector[axis], answer[axis])
+        return GpuVector(answer)
 
 
 if __name__ == '__main__':
-    a = GpuVector.create_vector_from_dict({axis: np.random.sample((32, 32)) for axis in 'xyz'})
-    b = GpuVector.create_vector_from_dict({axis: np.random.sample((32, 32)) for axis in 'xyz'})
+    a = GpuVector.create_vector_from_dict({axis: np.ones((1024, 1024)) for axis in 'xyz'})
+    b = GpuVector.create_vector_from_dict({axis: np.eye(1024) for axis in 'xyz'})
     print(a @ b)
