@@ -3,12 +3,18 @@ from numba import cuda
 
 
 def types(func):
+    """
+    This decorator looking for types and uses the special math operations to create the GpuVector from them
+    :param func: Decorating function
+    :return: Decorated function
+    """
+
     def inner(*args, **kwargs):
         if type(args[1]) != GpuVector:
             rows = args[0].vector[args[0].basis[0]].shape[0]
             columns = args[0].vector[args[0].basis[0]].shape[1]
             other = GpuVector.create_vector_from_dict(
-                {axis: np.ones((rows, columns)) * args[1] for axis in 'xyz'})
+                {axis: np.ones((rows, columns)) * args[1] for axis in args[0].basis})
             return func(args[0], other, **kwargs)
         return func(*args, **kwargs)
 
@@ -45,7 +51,7 @@ class GpuOperations(object):
             C[row, column] = A[row, column] / B[row, column]
 
     @staticmethod
-    @cuda.jit
+    @cuda.jit(fastmath=True)
     def cuda_floor_divide(A, B, C):
         row, column = cuda.grid(2)
         if row < C.shape[0] and column < C.shape[1]:
@@ -125,6 +131,8 @@ class GpuVector(GpuOperations):
 
     __radd__ = __add__
 
+    __iadd__ = __add__
+
     @types
     def __sub__(self, other):
         for axis in self.basis:
@@ -137,6 +145,8 @@ class GpuVector(GpuOperations):
             self.cuda_substraction[self.bpg, self.tpb](other.vector[axis], self.vector[axis], self.answer[axis])
         return GpuVector(self.answer)
 
+    __isub__ = __sub__
+
     @types
     def __mul__(self, other):
         for axis in self.basis:
@@ -144,6 +154,8 @@ class GpuVector(GpuOperations):
         return GpuVector(self.answer)
 
     __rmul__ = __mul__
+
+    __imul__ = __mul__
 
     @types
     def __matmul__(self, other):
@@ -203,12 +215,14 @@ class GpuVector(GpuOperations):
         return temp.copy_to_host()
 
     def to_dict(self):
+        """This method is converting the GpuVector to dictionary"""
         for axis in self.basis:
             self.vector[axis] = self.vector[axis].copy_to_host()
         return self.vector
 
     @property
     def T(self):
+        """This property method trasponse the GpuVector"""
         self.vector = self.to_dict()
         self.vector = {axis: cuda.to_device(self.vector[axis].T) for axis in self.basis}
         return GpuVector(self.vector)
@@ -219,8 +233,6 @@ class GpuVector(GpuOperations):
         mat_mul_1, mat_mul_2 = cuda.device_array_like(e), cuda.device_array_like(e)
         differences = {axis: cuda.device_array_like(e) for axis in self.basis}
 
-        differences = self.__matmul__(ones_matrix) - self.__rmatmul__(ones_matrix.T)
-
         for axis in self.basis:
             self.cuda_matrix_mul[self.bpg, self.tpb](self.vector[axis], ones_matrix, mat_mul_1)
             self.cuda_matrix_mul[self.bpg, self.tpb](ones_matrix.T, self.vector[axis].T, mat_mul_2)
@@ -228,7 +240,7 @@ class GpuVector(GpuOperations):
             self.cuda_addition[self.bpg, self.tpb](differences[axis], e, differences[axis])
         return GpuVector(differences)
 
-    def get_keys(self):
+    def get_keys(self) -> list:
         return self.basis
 
     def sum(self) -> float:
@@ -245,6 +257,6 @@ class GpuVector(GpuOperations):
 
 
 if __name__ == '__main__':
-    a = GpuVector.create_vector_from_dict({axis: np.ones((1024, 1024)) for axis in 'xyz'})
-    b = GpuVector.create_vector_from_dict({axis: np.eye(1024) for axis in 'xyz'})
-    print(a @ b)
+    a = GpuVector.create_vector_from_dict({axis: np.ones((1024, 1)) for axis in 'xyz'})
+    b = 2
+    print(a + b)

@@ -8,7 +8,7 @@ from classes.Vector import Vector
 class System(LJ):
     """This class describes the system founded on Lenard Jones particular interactions"""
 
-    def __init__(self, radiuses: Vector, velocities: Vector, sigma: float, eps: float,
+    def __init__(self, radiuses: GpuVector, velocities: GpuVector, sigma: float, eps: float,
                  temperature: float, mass: float, cube_length) -> None:
         super().__init__(radiuses, velocities, sigma, eps, mass)
 
@@ -48,10 +48,10 @@ class System(LJ):
     @classmethod
     def create_default_3D_system(cls, number_of_particles: int, cube_length: float, temperature: float):
         def _particles_overlap(radiuses: Vector, sigma: float) -> Vector:
-            print(f'Now the coordinates are configuring')
             differences = radiuses.differences()
             r = abs(differences)
-            if r.min() < sigma * 1.1:
+            if r.min() < sigma * 1.5:
+                print(f'Now the coordinates are configuring')
                 new_radiuses = Vector(
                     {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'})
                 _particles_overlap(new_radiuses, sigma)
@@ -62,9 +62,9 @@ class System(LJ):
         start_velocity = np.sqrt(boltsman * temperature / mass)
         properties = {
             'radiuses': Vector(
-                {axis: np.float32(np.random.sample((number_of_particles, 1))) * cube_length for axis in 'xyz'}),
+                {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
             'velocities': GpuVector.create_vector_from_dict(
-                {axis: np.float32((2 * np.random.sample((number_of_particles, 1)) - 1)) * start_velocity for axis in
+                {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in
                  'xyz'}),
             'sigma': 3.4e-10,
             'eps': 119.8 * boltsman,
