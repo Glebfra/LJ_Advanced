@@ -1,5 +1,6 @@
 import numpy as np
 
+from classes.GpuVector import GpuVector
 from classes.LJ import LJ
 from classes.Vector import Vector
 
@@ -7,7 +8,7 @@ from classes.Vector import Vector
 class System(LJ):
     """This class describes the system founded on Lenard Jones particular interactions"""
 
-    def __init__(self, radiuses: Vector, velocities: Vector, sigma: float, eps: float,
+    def __init__(self, radiuses: GpuVector, velocities: GpuVector, sigma: float, eps: float,
                  temperature: float, mass: float, cube_length) -> None:
         super().__init__(radiuses, velocities, sigma, eps, mass)
 
@@ -49,20 +50,22 @@ class System(LJ):
         def _particles_overlap(radiuses: Vector, sigma: float) -> Vector:
             differences = radiuses.differences()
             r = abs(differences)
-            if r.min() < sigma * 1.1:
+            if r.min() < sigma * 1.5:
+                print(f'Now the coordinates are configuring')
                 new_radiuses = Vector(
                     {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'})
                 _particles_overlap(new_radiuses, sigma)
-                print(f'Now the coordinates are configuring')
             else:
                 return radiuses
 
         boltsman, mass = 1.38e-23, 6.69e-26
         start_velocity = np.sqrt(boltsman * temperature / mass)
         properties = {
-            'radiuses': Vector({axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
-            'velocities': Vector(
-                {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in 'xyz'}),
+            'radiuses': Vector(
+                {axis: np.random.sample((number_of_particles, 1)) * cube_length for axis in 'xyz'}),
+            'velocities': GpuVector.create_vector_from_dict(
+                {axis: (2 * np.random.sample((number_of_particles, 1)) - 1) * start_velocity for axis in
+                 'xyz'}),
             'sigma': 3.4e-10,
             'eps': 119.8 * boltsman,
             'temperature': temperature,
@@ -70,6 +73,7 @@ class System(LJ):
             'cube_length': cube_length
         }
         properties['radiuses'] = _particles_overlap(properties['radiuses'], properties['sigma'])
+        properties['radiuses'] = GpuVector.create_vector_from_dict(properties['radiuses'].vector)
 
         return cls(**properties)
 

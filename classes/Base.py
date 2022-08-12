@@ -1,10 +1,10 @@
-from classes.Vector import Vector
+from classes.GpuVector import GpuVector
 
 
 class Base(object):
     """This superclass consists the radiuses, velocities and methods to work with them"""
 
-    def __init__(self, radiuses: Vector, velocities: Vector, mass: float) -> None:
+    def __init__(self, radiuses: GpuVector, velocities: GpuVector, mass: float) -> None:
         self.radiuses = radiuses
         self.velocities = velocities
         self.mass = mass
@@ -12,7 +12,7 @@ class Base(object):
         self.basis = radiuses.get_keys()
 
     @property
-    def radius_differences(self) -> Vector:
+    def radius_differences(self) -> GpuVector:
         """
         This method realise the calculation of radius differences
 

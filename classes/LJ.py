@@ -1,11 +1,11 @@
 from classes.Base import Base
-from classes.Vector import Vector
+from classes.GpuVector import GpuVector
 
 
 class LJ(Base):
     """This class describes the LJ particular interactions"""
 
-    def __init__(self, radiuses: Vector, velocities: Vector, sigma: float, eps: float, mass: float) -> None:
+    def __init__(self, radiuses: GpuVector, velocities: GpuVector, sigma: float, eps: float, mass: float) -> None:
         super().__init__(radiuses, velocities, mass)
 
         self.sigma = sigma
@@ -23,7 +23,7 @@ class LJ(Base):
         return 4 * self.eps * (temp ** 12 - temp ** 6).sum()
 
     @property
-    def force(self) -> Vector:
+    def force(self) -> GpuVector:
         """
         Forces of LJ system
         """
@@ -35,7 +35,7 @@ class LJ(Base):
         return forces.sum_columns()
 
     @property
-    def acceleration(self) -> Vector:
+    def acceleration(self) -> GpuVector:
         """Accelerations of LJ system"""
         return self.force / self.mass
 

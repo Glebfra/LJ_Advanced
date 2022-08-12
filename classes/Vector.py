@@ -1,9 +1,8 @@
 import numpy as np
+from numba import cuda
 
-from classes.Gpu import GpuOperations
 
-
-class Vector(GpuOperations):
+class Vector(object):
     def __init__(self, vector: dict) -> None:
         self.basis = list(vector.keys())
         self.vector = vector

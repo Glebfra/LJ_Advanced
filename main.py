@@ -7,7 +7,7 @@ from classes.System import System
 def main():
     # Creating the system
     properties = {
-        'number_of_particles': 50,
+        'number_of_particles': int(2**10),
         'cube_length': 1e-7,
         'temperature': 300,
     }
